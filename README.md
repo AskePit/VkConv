@@ -1,2 +1,2 @@
 # VkConv
-Downloads photos, music, conversation attachments from VK
+Downloads photos, music, conversation attachments from VK.

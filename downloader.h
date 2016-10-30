@@ -16,21 +16,20 @@ enum class ContentType {
     Link
 };
 
-typedef QList<QPair<QString, quint64>> Uid2NameMap;
+typedef QList<QPair<quint64, QString>> Uid2NameMap;
 
 class Downloader : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit Downloader(QProgressBar *mBar, QObject *parent = 0);
+    explicit Downloader(const QString &token, const QString &ownerId, QProgressBar *mBar, QObject *parent = 0);
     virtual ~Downloader();
 
-    //QString getBlankHtml();
-    void downloadAttachments(const QString& token, const QString& peerId, const QString& peerName, ContentType contentType, QString startFrom = "0");
-    Uid2NameMap getUsers(const QString& token);
-    void downloadSavedPhotos(const QString& token, const QString& userId, int from = 0);
-    void downloadMusic(const QString& token, const QString& userId, int from = 0);
+    Uid2NameMap getPeers();
+    void downloadAttachments(const QString& peerId, ContentType contentType, QString startFrom = "0");
+    void downloadSavedPhotos(const QString& userId, int from = 0);
+    void downloadMusic(const QString& userId, int from = 0);
 
 private slots:
     void replyFinished();
@@ -41,9 +40,15 @@ private:
     QNetworkAccessManager *mNetwork;
 
     QString mToken;
-    QString mPeerId;
+
+    QString mOwnerId;
+    QString mOwnerName;
+
+    bool mPeersMapCached;
+    Uid2NameMap mPeersMap;
     QString mUserId;
-    QString mPeerName;
+    QString mUserName;
+
     ContentType mContentType;
 
     QProgressBar *mBar;
@@ -59,6 +64,10 @@ private:
     void _downloadSavedPhotos(QNetworkReply* reply);
     void _downloadMusic(QNetworkReply* reply);
     void downloadFile(QNetworkReply* reply);
+
+    Uid2NameMap getUids2Names(const QList<quint64> &uids);
+    QString uid2Name(const QString &uid);
+    void setUserName();
 };
 
 #endif // NETWORK_H

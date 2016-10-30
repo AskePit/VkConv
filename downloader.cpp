@@ -12,12 +12,16 @@
 
 #include <QDebug>
 
-Downloader::Downloader(QProgressBar *bar, QObject *parent)
+Downloader::Downloader(const QString &token, const QString &ownerId, QProgressBar *bar, QObject *parent)
     : QObject(parent)
+    , mToken(token)
+    , mOwnerId(ownerId)
+    , mPeersMapCached(false)
     , mBar(bar)
 
 {
     mNetwork = new QNetworkAccessManager(this);
+    mOwnerName = uid2Name(mOwnerId);
 }
 
 Downloader::~Downloader()
@@ -80,21 +84,59 @@ static void waitForFinished(QNetworkReply *reply)
     loop.exec();
 }
 
-/*QString Downloader::getBlankHtml()
+Uid2NameMap Downloader::getUids2Names(const QList<quint64> &uids)
 {
-    QUrl url("https://oauth.vk.com/blank.html");
-    QNetworkReply *reply = manager->get(QNetworkRequest(url));
-    waitForFinished(reply);
+    QUrlQuery usersQ;
+    QString userIds;
+    for(const auto &uid : uids) {
+        userIds += QString::number(uid) + ",";
+    }
+    userIds.truncate(userIds.length()-1);
 
-    return reply->readAll();
-}*/
+    usersQ.addQueryItem("user_ids", userIds);
+    usersQ.addQueryItem("access_token", mToken);
 
-Uid2NameMap Downloader::getUsers(const QString& token)
+    QUrl usersUrl("https://api.vk.com/method/users.get");
+    usersUrl.setQuery(usersQ);
+
+    QNetworkReply *usersReply = mNetwork->get(QNetworkRequest(usersUrl));
+    waitForFinished(usersReply);
+
+    QJsonDocument usersDoc = getJsonDoc(usersReply);
+    QJsonArray usersAnswer = usersDoc.object()["response"]ARR;
+
+    Uid2NameMap uids2names;
+    for(const auto &user : usersAnswer) {
+        if(!user.isObject()) {
+            continue;
+        }
+
+        int uid = user OBJ["uid"]INT;
+        QString firstName = user OBJ["first_name"]STR;
+        QString lastName = user OBJ["last_name"]STR;
+
+        QPair<quint64, QString> pair(uid, QString("%1 %2").arg(firstName, lastName));
+        uids2names << pair;
+    }
+
+    return uids2names;
+}
+
+QString Downloader::uid2Name(const QString &uid)
 {
+    return getUids2Names( QList<quint64>{uid.toULongLong()} )[0].second;
+}
+
+Uid2NameMap Downloader::getPeers()
+{
+    if(mPeersMapCached) {
+        return mPeersMap;
+    }
+
     QUrlQuery dialogsQ;
     dialogsQ.addQueryItem("count", "200");
     dialogsQ.addQueryItem("preview_length", "1");
-    dialogsQ.addQueryItem("access_token", token);
+    dialogsQ.addQueryItem("access_token", mToken);
 
     QUrl dialogsUrl("https://api.vk.com/method/messages.getDialogs");
     dialogsUrl.setQuery(dialogsQ);
@@ -113,52 +155,27 @@ Uid2NameMap Downloader::getUsers(const QString& token)
         uids << user OBJ["uid"]INT;
     }
 
+    mPeersMapCached = true;
 
-    QUrlQuery usersQ;
-    QString userIds;
-    for(const auto &uid : uids) {
-        userIds += QString::number(uid) + ",";
-    }
-    userIds.truncate(userIds.length()-2);
-
-    usersQ.addQueryItem("user_ids", userIds);
-    usersQ.addQueryItem("access_token", token);
-
-    QUrl usersUrl("https://api.vk.com/method/users.get");
-    usersUrl.setQuery(usersQ);
-
-    QNetworkReply *usersReply = mNetwork->get(QNetworkRequest(usersUrl));
-    waitForFinished(usersReply);
-
-    QJsonDocument usersDoc = getJsonDoc(usersReply);
-    QJsonArray usersAnswer = usersDoc.object()["response"]ARR;
-
-    Uid2NameMap uid2name;
-    for(const auto &user : usersAnswer) {
-        if(!user.isObject()) {
-            continue;
-        }
-
-        int uid = user OBJ["uid"]INT;
-        QString firstName = user OBJ["first_name"]STR;
-        QString lastName = user OBJ["last_name"]STR;
-
-        QPair<QString, quint64> pair(QString("%1 %2").arg(firstName).arg(lastName), uid);
-        uid2name << pair;
-    }
-
-    return uid2name;
+    return getUids2Names(uids);
 }
 
-void Downloader::downloadAttachments(const QString& token, const QString& peerId, const QString& peerName, ContentType type, QString startFrom)
+void Downloader::setUserName()
 {
-    this->mToken = token;
-    this->mPeerId = peerId;
-    this->mPeerName = peerName;
-    this->mContentType = type;
+    auto peersMap = getPeers();
+    for(const auto &p : peersMap) {
+        if(QString::number(p.first) == mUserId) {
+            mUserName = p.second;
+            break;
+        }
+    }
+}
 
-    QDir d;
-    d.mkpath(QString("%1/%2/%3/").arg(peerName, "attachments", ContentTypeString(type)));
+void Downloader::downloadAttachments(const QString& peerId, ContentType type, QString startFrom)
+{
+    mUserId = peerId;
+    mContentType = type;
+    setUserName();
 
     QUrlQuery query;
     query.addQueryItem("peer_id", peerId);
@@ -166,7 +183,7 @@ void Downloader::downloadAttachments(const QString& token, const QString& peerId
     query.addQueryItem("start_from", startFrom);
     query.addQueryItem("count", "200");
     query.addQueryItem("photo_sizes", "1");
-    query.addQueryItem("access_token", token);
+    query.addQueryItem("access_token", mToken);
 
     QUrl url("https://api.vk.com/method/messages.getHistoryAttachments");
     url.setQuery(query);
@@ -183,6 +200,8 @@ void Downloader::replyFinished()
         _downloadAttachments(reply);
     } else if(mSavedPhotosMap.contains(reply)) {
         _downloadSavedPhotos(reply);
+    } else if(mMusicMap.contains(reply)) {
+        _downloadMusic(reply);
     } else if(mFileMap.keys().contains(reply)) {
         downloadFile(reply);
     }
@@ -241,16 +260,21 @@ void Downloader::_downloadAttachments(QNetworkReply* reply)
         return;
     }
 
+    ContentType contentType = mAttachmentsMap[reply];
+    QString userDirName = (mOwnerId == mUserId) ? "_Me" : QString("%1 %2").arg(mUserName, mUserId);
+    QString dirName(QString("%1 %2/%3/%4/%5/").arg(mOwnerName, mOwnerId, userDirName, "attachments", ContentTypeString(contentType)));
+    QDir d;
+    d.mkpath(dirName);
+
     for(const auto& key : response.keys()) {
         if(key == "0") continue;
         if(key == "next_from") {
-            downloadAttachments(mToken, mPeerId, mPeerName, mContentType, response["next_from"]STR);
+            downloadAttachments(mUserId, mContentType, response["next_from"]STR);
             continue;
         }
 
-        ContentType contentType = mAttachmentsMap[reply];
         QString url;
-        QString fileName = QString("%1/%2/%3/").arg(mPeerName, "attachments", ContentTypeString(contentType));
+        QString fileName = dirName;
         switch(contentType) {
             case ContentType::Photo: {
                 QJsonObject photo = response[key]OBJ["photo"]OBJ;
@@ -363,23 +387,19 @@ void Downloader::slotDownloadProgress(qint64 received, qint64 total)
     mBar->setValue(rec/(float)tot*100.);
 }
 
-void Downloader::downloadSavedPhotos(const QString& token, const QString& userId, int from)
+void Downloader::downloadSavedPhotos(const QString& userId, int from)
 {
-    this->mToken = token;
-    this->mUserId = userId;
-    this->mContentType = ContentType::Photo;
-
-    QDir d;
-    d.mkpath(QString("%1/").arg("saved photos"));
+    mUserId = userId;
+    mContentType = ContentType::Photo;
+    setUserName();
 
     QUrlQuery query;
-    query.addQueryItem("owner_id", userId);
-    //query.addQueryItem("owner_id", "30801388");
+    query.addQueryItem("owner_id", mUserId);
     query.addQueryItem("album_id", "saved");
     query.addQueryItem("photo_sizes", "1");
     query.addQueryItem("offset", QString::number(from));
     query.addQueryItem("count", "1000");
-    query.addQueryItem("access_token", token);
+    query.addQueryItem("access_token", mToken);
 
     QUrl url("https://api.vk.com/method/photos.get");
     url.setQuery(query);
@@ -394,6 +414,11 @@ void Downloader::_downloadSavedPhotos(QNetworkReply* reply)
         return;
     }
 
+    QString userDirName = (mOwnerId == mUserId) ? "_Me" : QString("%1 %2").arg(mUserName, mUserId);
+    QString dirName(QString("%1 %2/%3/%4").arg(mOwnerName, mOwnerId, userDirName, "saved photos"));
+    QDir d;
+    d.mkpath(dirName);
+
     QJsonObject answer = document.object();
     QJsonArray response = answer["response"]ARR;
 
@@ -401,7 +426,7 @@ void Downloader::_downloadSavedPhotos(QNetworkReply* reply)
         QJsonObject photo = elem OBJ;
         QJsonArray sizes = photo["sizes"]ARR;
 
-        QString fileName = QString("%1/%2.jpg").arg("saved photos/", QString::number(photo["pid"]INT));
+        QString fileName = QString("%1/%2.jpg").arg(dirName, QString::number(photo["pid"]INT));
 
         QString url = getPicUrl(sizes);
         if(url == "") {
@@ -419,30 +444,26 @@ void Downloader::_downloadSavedPhotos(QNetworkReply* reply)
     }
 
     if(response.count()) {
-        downloadSavedPhotos(mToken, mUserId, mSavedPhotosMap[reply]+1000);
+        downloadSavedPhotos(mUserId, mSavedPhotosMap[reply]+1000);
     }
 
     mSavedPhotosMap.remove(reply);
     reply->deleteLater();
 }
 
-void Downloader::downloadMusic(const QString& token, const QString& userId, int from)
+void Downloader::downloadMusic(const QString& userId, int from)
 {
-    this->mToken = token;
-    this->mUserId = userId;
-    this->mContentType = ContentType::Audio;
-
-    QDir d;
-    d.mkpath(QString("%1/").arg("music"));
+    mUserId = userId;
+    mContentType = ContentType::Audio;
+    setUserName();
 
     QUrlQuery query;
     query.addQueryItem("owner_id", userId);
-    //query.addQueryItem("owner_id", "30801388");
     query.addQueryItem("offset", QString::number(from));
     query.addQueryItem("count", "1000");
-    query.addQueryItem("access_token", token);
+    query.addQueryItem("access_token", mToken);
 
-    QUrl url("https://api.vk.com/method/audios.get");
+    QUrl url("https://api.vk.com/method/audio.get");
     url.setQuery(query);
 
     mMusicMap[getReply(url)] = from;
@@ -455,6 +476,11 @@ void Downloader::_downloadMusic(QNetworkReply* reply)
         return;
     }
 
+    QString userDirName = (mOwnerId == mUserId) ? "_Me" : QString("%1 %2").arg(mUserName, mUserId);
+    QString dirName(QString("%1 %2/%3/%4").arg(mOwnerName, mOwnerId, userDirName, "music"));
+    QDir d;
+    d.mkpath(dirName);
+
     QJsonObject answer = document.object();
     QJsonArray response = answer["response"]ARR;
 
@@ -464,12 +490,12 @@ void Downloader::_downloadMusic(QNetworkReply* reply)
         QString artist = audio["artist"]STR;
         QString title = audio["title"]STR;
 
-        QString fileName = QString("%1/%2 - %3.mp3").arg("music/", artist, title);
+        QString fileName = QString("%1/%2 - %3.mp3").arg(dirName, artist, title);
         mFileMap[getReply(url)] = fileName;
     }
 
     if(response.count()) {
-        downloadMusic(mToken, mUserId, mMusicMap[reply]+1000);
+        downloadMusic(mOwnerId, mMusicMap[reply]+1000);
     }
 
     mMusicMap.remove(reply);

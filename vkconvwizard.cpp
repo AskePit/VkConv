@@ -215,7 +215,7 @@ DetailsPage::DetailsPage(CommonData &shared, QWidget *parent)
     setLayout(layout);
 
     registerField("me", me);
-    registerField("peer", peers, "currentText");
+    registerField("peerName", peers, "currentText");
     registerField("photoAttachments", photo);
     registerField("audioAttachments", audio);
     registerField("docsAttachments", docs);
@@ -227,17 +227,17 @@ void DetailsPage::initializePage()
     authResponse = authResponse.mid(authResponse.indexOf('#')+1);
     QUrlQuery authUrl(authResponse);
     shared.token = authUrl.queryItemValue("access_token");
-    shared.userId = authUrl.queryItemValue("user_id");
+    shared.ownerId = authUrl.queryItemValue("user_id");
 
-    Downloader d(nullptr);
-    shared.uid2name = d.getUsers(shared.token);
+    Downloader d(shared.token, shared.ownerId, nullptr);
+    shared.uid2name = d.getPeers();
 
     for(const auto &u : shared.uid2name) {
-        peers->addItem(u.first);
+        peers->addItem(u.second);
     }
 
     QSettings settings("PitM", "VkConv");
-    QString savedPeer = settings.value("peer", "").toString();
+    QString savedPeer = settings.value("peerName", "").toString();
     if(!savedPeer.isEmpty()) {
         peers->setCurrentText(savedPeer);
     }
@@ -297,28 +297,28 @@ void DownloadPage::initializePage()
         settings.setValue("menuItem", static_cast<int>(MenuItem::Music));
     }
 
-    QString peer = field("peer").toString();
-    settings.setValue("peer", peer);
+    QString peer = field("peerName").toString();
+    settings.setValue("peerName", peer);
 
     bool me = field("me").toBool();
     settings.setValue("me", me);
 
     QString peerId;
     for(const auto &u : shared.uid2name) {
-        if(u.first == peer) {
-            peerId = QString::number(u.second);
+        if(u.second == peer) {
+            peerId = QString::number(u.first);
             break;
         }
     }
 
     const QString &token = shared.token;
-    const QString &userId = me ? shared.userId : peerId;
+    const QString &userId = me ? shared.ownerId : peerId;
 
     bool downloadAttachments = field("downloadAttachments").toBool();
     bool downloadSavedPhotos = field("downloadSavedPhotos").toBool();
     bool downloadMusic = field("downloadMusic").toBool();
 
-    Downloader *d = new Downloader(bar);
+    Downloader *d = new Downloader(token, shared.ownerId, bar);
 
     if(downloadAttachments) {
         bool photo = field("photoAttachments").toBool();
@@ -326,21 +326,21 @@ void DownloadPage::initializePage()
         bool docs = field("docsAttachments").toBool();
 
         if(photo) {
-            d->downloadAttachments(token, peerId, peer, ContentType::Photo);
+            d->downloadAttachments(peerId, ContentType::Photo);
         }
 
         if(audio) {
-            d->downloadAttachments(token, peerId, peer, ContentType::Audio);
+            d->downloadAttachments(peerId, ContentType::Audio);
         }
 
         if(docs) {
-            d->downloadAttachments(token, peerId, peer, ContentType::Doc);
+            d->downloadAttachments(peerId, ContentType::Doc);
         }
 
     } else if(downloadSavedPhotos) {
-        d->downloadSavedPhotos(token, userId);
+        d->downloadSavedPhotos(userId);
 
     } else if(downloadMusic) {
-        d->downloadMusic(token, userId);
+        d->downloadMusic(userId);
     }
 }

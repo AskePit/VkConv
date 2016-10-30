@@ -232,6 +232,7 @@ void DetailsPage::initializePage()
     Downloader d(shared.token, shared.ownerId, nullptr);
     shared.uid2name = d.getPeers();
 
+    peers->clear();
     for(const auto &u : shared.uid2name) {
         peers->addItem(u.second);
     }

@@ -84,7 +84,7 @@ static void waitForFinished(QNetworkReply *reply)
     loop.exec();
 }
 
-Uid2NameMap Downloader::getUids2Names(const QList<quint64> &uids)
+Uid2NameMap Downloader::getUids2Names(const QList<qulonglong> &uids)
 {
     QUrlQuery usersQ;
     QString userIds;
@@ -115,7 +115,7 @@ Uid2NameMap Downloader::getUids2Names(const QList<quint64> &uids)
         QString firstName = user OBJ["first_name"]STR;
         QString lastName = user OBJ["last_name"]STR;
 
-        QPair<quint64, QString> pair(uid, QString("%1 %2").arg(firstName, lastName));
+        QPair<qulonglong, QString> pair(uid, QString("%1 %2").arg(firstName, lastName));
         uids2names << pair;
     }
 
@@ -124,7 +124,7 @@ Uid2NameMap Downloader::getUids2Names(const QList<quint64> &uids)
 
 QString Downloader::uid2Name(const QString &uid)
 {
-    return getUids2Names( QList<quint64>{uid.toULongLong()} )[0].second;
+    return getUids2Names( QList<qulonglong>{uid.toULongLong()} )[0].second;
 }
 
 Uid2NameMap Downloader::getPeers()
@@ -147,7 +147,7 @@ Uid2NameMap Downloader::getPeers()
     QJsonDocument dialogsDoc = getJsonDoc(dialogsReply);
 
     QJsonArray dialogsAnswer = dialogsDoc.object()["response"]ARR;
-    QList<quint64> uids;
+    QList<qulonglong> uids;
     for(const auto &user : dialogsAnswer) {
         if(!user.isObject()) {
             continue;

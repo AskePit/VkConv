@@ -15,7 +15,7 @@ namespace Ui {
 class VkConvWizard;
 }
 
-typedef QList<QPair<quint64, QString>> Uid2NameMap;
+typedef QList<QPair<qulonglong, QString>> Uid2NameMap;
 
 struct CommonData {
     Uid2NameMap uid2name;

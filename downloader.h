@@ -16,7 +16,7 @@ enum class ContentType {
     Link
 };
 
-typedef QList<QPair<quint64, QString>> Uid2NameMap;
+typedef QList<QPair<qulonglong, QString>> Uid2NameMap;
 
 class Downloader : public QObject
 {
@@ -65,7 +65,7 @@ private:
     void _downloadMusic(QNetworkReply* reply);
     void downloadFile(QNetworkReply* reply);
 
-    Uid2NameMap getUids2Names(const QList<quint64> &uids);
+    Uid2NameMap getUids2Names(const QList<qulonglong> &uids);
     QString uid2Name(const QString &uid);
     void setUserName();
 };

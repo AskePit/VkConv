@@ -204,7 +204,7 @@ DetailsPage::DetailsPage(CommonData &shared, QWidget *parent)
     setLayout(layout);
 
     registerField("me", me);
-    registerField("peerName", peers, "currentText");
+    registerField("peerId", peers, "currentData");
     registerField("photoAttachments", photo);
     registerField("audioAttachments", audio);
     registerField("docsAttachments", docs);
@@ -223,13 +223,17 @@ void DetailsPage::initializePage()
 
     peers->clear();
     for(const auto &u : shared.uid2name) {
-        peers->addItem(u.second);
+        peers->addItem(u.second, u.first);
     }
 
     QSettings settings("PitM", "VkConv");
-    QString savedPeer = settings.value("peerName", "").toString();
-    if(!savedPeer.isEmpty()) {
-        peers->setCurrentText(savedPeer);
+    qulonglong savedPeer = settings.value("peerId").toULongLong();
+    for(int i = 0; i<peers->count(); ++i) {
+        const qulonglong id = peers->itemData(i).toULongLong();
+        if(id == savedPeer) {
+            peers->setCurrentIndex(i);
+            break;
+        }
     }
 
     bool downloadAttachments = field("downloadAttachments").toBool();
@@ -287,19 +291,13 @@ void DownloadPage::initializePage()
         settings.setValue("menuItem", static_cast<int>(MenuItem::Music));
     }
 
-    QString peer = field("peerName").toString();
-    settings.setValue("peerName", peer);
+    qulonglong peer = field("peerId").toULongLong();
+    settings.setValue("peerId", peer);
 
     bool me = field("me").toBool();
     settings.setValue("me", me);
 
-    QString peerId;
-    for(const auto &u : shared.uid2name) {
-        if(u.second == peer) {
-            peerId = QString::number(u.first);
-            break;
-        }
-    }
+    QString peerId = QString::number(peer);
 
     const QString &token = shared.token;
     const QString &userId = me ? shared.ownerId : peerId;

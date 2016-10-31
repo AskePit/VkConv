@@ -124,7 +124,12 @@ Uid2NameMap Downloader::getUids2Names(const QList<qulonglong> &uids)
 
 QString Downloader::uid2Name(const QString &uid)
 {
-    return getUids2Names( QList<qulonglong>{uid.toULongLong()} )[0].second;
+    auto l = getUids2Names( QList<qulonglong>{uid.toULongLong()} );
+    if(l.isEmpty()) {
+        return QString();
+    }
+
+    return l[0].second;
 }
 
 Uid2NameMap Downloader::getPeers()

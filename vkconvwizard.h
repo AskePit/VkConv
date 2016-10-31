@@ -54,6 +54,9 @@ class AuthPage : public QWizardPage
 public:
     AuthPage(QWidget *parent = 0);
 
+protected:
+    void initializePage();
+
 private:
     QTextEdit *authRequest;
     QTextEdit *authResponse;
@@ -70,7 +73,6 @@ public:
     MenuPage(QWidget *parent = 0);
 
 protected:
-    int nextId() const;
     void initializePage();
 
 private:
@@ -89,6 +91,8 @@ class DetailsPage : public QWizardPage
 
 public:
     DetailsPage(CommonData &shared, QWidget *parent = 0);
+
+protected:
     void initializePage();
 
 private:
@@ -111,6 +115,8 @@ class DownloadPage : public QWizardPage
 
 public:
     DownloadPage(CommonData &shared, QWidget *parent = 0);
+
+protected:
     void initializePage();
 
 private:

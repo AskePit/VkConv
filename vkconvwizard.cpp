@@ -70,24 +70,13 @@ AuthPage::AuthPage(QWidget *parent)
                                 "response_type=token&"
                                 "v=5.53");
     authRequest->setMaximumHeight(textEditHeight);
+    authRequest->setReadOnly(true);
     authRequest->setFocus();
     authRequest->selectAll();
 
     QLabel *responseLabel = new QLabel("Response:");
     authResponse = new QTextEdit;
     authResponse->setMaximumHeight(textEditHeight);
-
-    QSettings settings("PitM", "VkConv");
-    QString savedtokenResponse = settings.value("tokenResponse", "").toString();
-    if(!savedtokenResponse.isEmpty()) {
-        authResponse->setText(savedtokenResponse);
-    }
-
-    /*qulonglong currTime = time(0);
-    qulonglong expireTime = settings.value("expireTime", 0).toULongLong();
-    if(currTime < expireTime) {
-        wizard()->next();
-    }*/
 
     QVBoxLayout *layout = new QVBoxLayout;
     layout->addWidget(label);
@@ -99,6 +88,21 @@ AuthPage::AuthPage(QWidget *parent)
     setLayout(layout);
 
     registerField("authResponse", authResponse, "plainText");
+}
+
+void AuthPage::initializePage()
+{
+    QSettings settings("PitM", "VkConv");
+    QString savedtokenResponse = settings.value("tokenResponse", "").toString();
+    if(!savedtokenResponse.isEmpty()) {
+        authResponse->setText(savedtokenResponse);
+    }
+
+    /*qulonglong currTime = time(0);
+    qulonglong expireTime = settings.value("expireTime", 0).toULongLong();
+    if(currTime < expireTime) {
+        wizard()->next();
+    }*/
 }
 
 enum class MenuItem {
@@ -153,21 +157,6 @@ void MenuPage::initializePage()
 
     QString authResponse = field("authResponse").toString();
     settings.setValue("tokenResponse", authResponse);
-}
-
-int MenuPage::nextId() const
-{
-    /*if(attachments->isChecked()) {
-        return VkConvWizard::Page_Details;
-    } else if(savedPhotos->isChecked()) {
-        return VkConvWizard::Page_Download;
-    } else if(music->isChecked()) {
-        return VkConvWizard::Page_Download;
-    } else {
-        return -1;
-    }*/
-
-    return VkConvWizard::Page_Details;
 }
 
 /////////////////////////////////////////////////

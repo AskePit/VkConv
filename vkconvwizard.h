@@ -10,6 +10,7 @@ class QComboBox;
 class QProgressBar;
 class QRadioButton;
 class QButtonGroup;
+class QLabel;
 
 namespace Ui {
 class VkConvWizard;
@@ -99,6 +100,7 @@ private:
     QRadioButton *me;
     QRadioButton *notMe;
     QComboBox *peers;
+    QLabel *contentLabel;
     QCheckBox *photo;
     QCheckBox *audio;
     QCheckBox *docs;

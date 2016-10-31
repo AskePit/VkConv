@@ -22,15 +22,17 @@
 VkConvWizard::VkConvWizard(QWidget *parent)
     : QWizard(parent)
 {
-    setButtonText(QWizard::FinishButton, "New");
-    setButtonText(QWizard::CancelButton, "Exit");
+    setButtonText(QWizard::FinishButton, tr("New"));
+    setButtonText(QWizard::NextButton, tr("Next"));
+    setButtonText(QWizard::BackButton, tr("Back"));
+    setButtonText(QWizard::CancelButton, tr("Exit"));
 
     setPage(Page_Auth, new AuthPage);
     setPage(Page_Menu, new MenuPage);
     setPage(Page_Details, new DetailsPage(shared));
     setPage(Page_Download, new DownloadPage(shared));
 
-    setWindowTitle("VK Conv");
+    setWindowTitle(tr("VK Conv"));
 }
 
 void VkConvWizard::accept()
@@ -55,13 +57,13 @@ AuthPage::AuthPage(QWidget *parent)
 {
     setTitle(tr("Authorization"));
 
-    QLabel *label = new QLabel("Copy authorization request, paste it to web-browser "
-                          "and copy URL on which you'll be redirected");
+    QLabel *label = new QLabel(tr("Copy authorization request, paste it to web-browser "
+                                  "and copy URL on which you'll be redirected"));
     label->setWordWrap(true);
 
     const int textEditHeight = 50;
 
-    QLabel *requestLabel = new QLabel("Request:");
+    QLabel *requestLabel = new QLabel(tr("Request:"));
     authRequest = new QTextEdit("https://oauth.vk.com/authorize?"
                                 "client_id=5066618&"
                                 "display=page&"
@@ -74,7 +76,7 @@ AuthPage::AuthPage(QWidget *parent)
     authRequest->setFocus();
     authRequest->selectAll();
 
-    QLabel *responseLabel = new QLabel("Response:");
+    QLabel *responseLabel = new QLabel(tr("Response:"));
     authResponse = new QTextEdit;
     authResponse->setMaximumHeight(textEditHeight);
 
@@ -118,14 +120,14 @@ enum class MenuItem {
 MenuPage::MenuPage(QWidget *parent)
     : QWizardPage(parent)
 {
-    setTitle(tr("Choose action"));
+    setTitle(tr("Menu"));
 
-    QLabel *label = new QLabel("Choose content you want to download");
+    QLabel *label = new QLabel(tr("Choose content you want to download"));
     label->setWordWrap(true);
 
-    attachments = new QRadioButton("Attachments");
-    savedPhotos = new QRadioButton("Saved photos");
-    music = new QRadioButton("Music");
+    attachments = new QRadioButton(tr("Dialog Attachments"));
+    savedPhotos = new QRadioButton(tr("Saved photos"));
+    music = new QRadioButton(tr("Music"));
     group = new QButtonGroup();
     group->addButton(attachments);
     group->addButton(savedPhotos);
@@ -170,7 +172,7 @@ DetailsPage::DetailsPage(CommonData &shared, QWidget *parent)
 {
     setTitle(tr("Details"));
 
-    me = new QRadioButton("Me");
+    me = new QRadioButton(tr("Me"));
     notMe = new QRadioButton();
     peers = new QComboBox();
 
@@ -179,14 +181,16 @@ DetailsPage::DetailsPage(CommonData &shared, QWidget *parent)
 
     connect(me, &QRadioButton::toggled, [&](bool checked){ peers->setDisabled(checked); });
 
-    photo = new QCheckBox("Photo");
-    audio = new QCheckBox("Audio");
-    docs = new QCheckBox("Docs");
+    photo = new QCheckBox(tr("Photo"));
+    audio = new QCheckBox(tr("Audio"));
+    docs = new QCheckBox(tr("Docs"));
 
     photo->setChecked(true);
 
     QVBoxLayout *layout = new QVBoxLayout;
     layout->addStretch(1);
+    QLabel *peerLabel = new QLabel(tr("Peer to download:"));
+    layout->addWidget(peerLabel);
     QHBoxLayout *hLayout = new QHBoxLayout;
     QWidget *hLayoutWidget = new QWidget;
     hLayout->setContentsMargins(0, 0, 0, 0);
@@ -197,6 +201,8 @@ DetailsPage::DetailsPage(CommonData &shared, QWidget *parent)
     hLayoutWidget->setLayout(hLayout);
     layout->addWidget(hLayoutWidget);
     layout->addStretch(1);
+    contentLabel = new QLabel(tr("Content to download:"));
+    layout->addWidget(contentLabel);
     layout->addWidget(photo);
     layout->addWidget(audio);
     layout->addWidget(docs);
@@ -247,6 +253,7 @@ void DetailsPage::initializePage()
     }
 
     if(downloadSavedPhotos || downloadMusic) {
+        contentLabel->hide();
         photo->hide();
         audio->hide();
         docs->hide();
@@ -273,7 +280,9 @@ DownloadPage::DownloadPage(CommonData &shared, QWidget *parent)
     bar = new QProgressBar();
 
     QVBoxLayout *layout = new QVBoxLayout;
+    layout->addStretch(1);
     layout->addWidget(bar);
+    layout->addStretch(2);
     setLayout(layout);
 
     show();

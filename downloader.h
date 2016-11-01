@@ -18,18 +18,20 @@ enum class ContentType {
 
 typedef QList<QPair<qulonglong, QString>> Uid2NameMap;
 
+using CStringRef = const QString &;
+
 class Downloader : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit Downloader(const QString &token, const QString &ownerId, const QString &downloadFolder = ".", QProgressBar *bar = 0, QObject *parent = 0);
+    explicit Downloader(CStringRef token, CStringRef ownerId, CStringRef downloadFolder = ".", QProgressBar *bar = 0, QObject *parent = 0);
     virtual ~Downloader();
 
     Uid2NameMap getPeers();
-    void downloadAttachments(const QString& peerId, ContentType contentType, QString startFrom = "0");
-    void downloadSavedPhotos(const QString& userId, int from = 0);
-    void downloadMusic(const QString& userId, int from = 0);
+    void downloadAttachments(CStringRef peerId, ContentType contentType, CStringRef startFrom = "0");
+    void downloadSavedPhotos(CStringRef userId, int from = 0);
+    void downloadMusic(CStringRef userId, int from = 0);
 
 private slots:
     void replyFinished();
@@ -68,7 +70,7 @@ private:
     void downloadFile(QNetworkReply* reply);
 
     Uid2NameMap getUids2Names(const QList<qulonglong> &uids);
-    QString uid2Name(const QString &uid);
+    QString uid2Name(CStringRef uid);
     void setUserName();
 };
 

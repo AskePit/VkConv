@@ -12,7 +12,7 @@
 
 #include <QDebug>
 
-Downloader::Downloader(const QString &token, const QString &ownerId, const QString &downloadFolder, QProgressBar *bar, QObject *parent)
+Downloader::Downloader(CStringRef token, CStringRef ownerId, CStringRef downloadFolder, QProgressBar *bar, QObject *parent)
     : QObject(parent)
     , mDownloadFolder(downloadFolder)
     , mToken(token)
@@ -123,7 +123,7 @@ Uid2NameMap Downloader::getUids2Names(const QList<qulonglong> &uids)
     return uids2names;
 }
 
-QString Downloader::uid2Name(const QString &uid)
+QString Downloader::uid2Name(CStringRef uid)
 {
     auto l = getUids2Names( QList<qulonglong>{uid.toULongLong()} );
     if(l.isEmpty()) {
@@ -177,7 +177,7 @@ void Downloader::setUserName()
     }
 }
 
-void Downloader::downloadAttachments(const QString& peerId, ContentType type, QString startFrom)
+void Downloader::downloadAttachments(CStringRef peerId, ContentType type, CStringRef startFrom)
 {
     mUserId = peerId;
     mContentType = type;
@@ -391,7 +391,7 @@ void Downloader::slotDownloadProgress(qint64 received, qint64 total)
     mBar->setValue(rec/(float)tot*100.);
 }
 
-void Downloader::downloadSavedPhotos(const QString& userId, int from)
+void Downloader::downloadSavedPhotos(CStringRef userId, int from)
 {
     mUserId = userId;
     mContentType = ContentType::Photo;
@@ -455,7 +455,7 @@ void Downloader::_downloadSavedPhotos(QNetworkReply* reply)
     reply->deleteLater();
 }
 
-void Downloader::downloadMusic(const QString& userId, int from)
+void Downloader::downloadMusic(CStringRef userId, int from)
 {
     mUserId = userId;
     mContentType = ContentType::Audio;

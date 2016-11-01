@@ -184,25 +184,25 @@ DetailsPage::DetailsPage(CommonData &shared, QWidget *parent)
 
     QVBoxLayout *layout = new QVBoxLayout;
     layout->addWidget(dirLabel);
-    QHBoxLayout *h2Layout = new QHBoxLayout;
-    QWidget *h2LayoutWidget = new QWidget;
-    h2Layout->setContentsMargins(0, 0, 0, 0);
-    h2Layout->addWidget(downloadDirPath);
-    h2Layout->addWidget(browseButton);
-    h2LayoutWidget->setLayout(h2Layout);
-    layout->addWidget(h2LayoutWidget);
+    QHBoxLayout *h1Layout = new QHBoxLayout;
+    QWidget *h1LayoutWidget = new QWidget;
+    h1Layout->setContentsMargins(0, 0, 0, 0);
+    h1Layout->addWidget(downloadDirPath);
+    h1Layout->addWidget(browseButton);
+    h1LayoutWidget->setLayout(h1Layout);
+    layout->addWidget(h1LayoutWidget);
     layout->addStretch(1);
     QLabel *peerLabel = new QLabel(tr("Peer to download:"));
     layout->addWidget(peerLabel);
-    QHBoxLayout *hLayout = new QHBoxLayout;
-    QWidget *hLayoutWidget = new QWidget;
-    hLayout->setContentsMargins(0, 0, 0, 0);
-    hLayout->addWidget(me);
-    hLayout->addWidget(notMe);
-    hLayout->addWidget(peers);
-    hLayout->addStretch(1);
-    hLayoutWidget->setLayout(hLayout);
-    layout->addWidget(hLayoutWidget);
+    QHBoxLayout *h2Layout = new QHBoxLayout;
+    QWidget *h2LayoutWidget = new QWidget;
+    h2Layout->setContentsMargins(0, 0, 0, 0);
+    h2Layout->addWidget(me);
+    h2Layout->addWidget(notMe);
+    h2Layout->addWidget(peers);
+    h2Layout->addStretch(1);
+    h2LayoutWidget->setLayout(h2Layout);
+    layout->addWidget(h2LayoutWidget);
     layout->addStretch(1);
     contentLabel = new QLabel(tr("Content to download:"));
     layout->addWidget(contentLabel);
@@ -330,8 +330,8 @@ void DownloadPage::initializePage()
 
     QString peerId = QString::number(peer);
 
-    const QString &token = shared.token;
-    const QString &userId = me ? shared.ownerId : peerId;
+    CStringRef token = shared.token;
+    CStringRef userId = me ? shared.ownerId : peerId;
 
     QString downloadFolder = stringField(Field::DownloadFolder);
 

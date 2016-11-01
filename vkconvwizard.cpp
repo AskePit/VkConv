@@ -284,8 +284,6 @@ DownloadPage::DownloadPage(CommonData &shared, QWidget *parent)
     layout->addWidget(bar);
     layout->addStretch(2);
     setLayout(layout);
-
-    show();
 }
 
 void DownloadPage::initializePage()

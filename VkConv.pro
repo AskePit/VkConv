@@ -23,3 +23,6 @@ RESOURCES += \
     i18n/lang.qrc
 
 QMAKE_CXXFLAGS += -Ofast -Wall -Wpedantic
+
+DEFINES *= \
+    QT_USE_QSTRINGBUILDER

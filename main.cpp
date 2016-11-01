@@ -7,7 +7,10 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
     QTranslator translator;
-    if (translator.load("tr_" + QLocale::system().name().left(2), ":/i18n")) {
+
+    //QString lang = "de";
+    QString lang = QLocale::system().name().left(2);
+    if (translator.load("tr_" + lang, ":/i18n")) {
         a.installTranslator(&translator);
     }
 

@@ -12,11 +12,10 @@
 #include <QProgressBar>
 #include <QVBoxLayout>
 #include <QUrlQuery>
-#include <QSettings>
 #include <QDir>
 #include <QFileDialog>
 
-#include <time.h>
+QSettings Registry::reg("PitM", "VkConv");
 
 /////////////////////////////////////////////////
 /// \brief VkConvWizard::VkConvWizard
@@ -54,7 +53,7 @@ void VkConvWizard::done(int result)
 /// \param parent
 ///
 AuthPage::AuthPage(QWidget *parent)
-    : QWizardPage(parent)
+    : VkConvPage(parent)
 {
     setTitle(tr("Authorization"));
 
@@ -90,22 +89,15 @@ AuthPage::AuthPage(QWidget *parent)
     layout->addWidget(authResponse);
     setLayout(layout);
 
-    registerField("authResponse", authResponse, "plainText");
+    declareField(Field::TokenResponse, authResponse, "plainText");
 }
 
 void AuthPage::initializePage()
 {
-    QSettings settings("PitM", "VkConv");
-    QString savedtokenResponse = settings.value("tokenResponse", "").toString();
-    if(!savedtokenResponse.isEmpty()) {
-        authResponse->setText(savedtokenResponse);
+    QString savedToken = Registry::String(Field::TokenResponse);
+    if(!savedToken.isEmpty()) {
+        authResponse->setText(savedToken);
     }
-
-    /*qulonglong currTime = time(0);
-    qulonglong expireTime = settings.value("expireTime", 0).toULongLong();
-    if(currTime < expireTime) {
-        wizard()->next();
-    }*/
 }
 
 enum class MenuItem {
@@ -119,7 +111,7 @@ enum class MenuItem {
 /// \param parent
 ///
 MenuPage::MenuPage(QWidget *parent)
-    : QWizardPage(parent)
+    : VkConvPage(parent)
 {
     setTitle(tr("Menu"));
 
@@ -143,23 +135,18 @@ MenuPage::MenuPage(QWidget *parent)
     layout->addStretch(1);
     setLayout(layout);
 
-    registerField("downloadAttachments", attachments);
-    registerField("downloadSavedPhotos", savedPhotos);
-    registerField("downloadMusic", music);
+    declareField(Field::Attachments, attachments);
+    declareField(Field::SavedPhotos, savedPhotos);
+    declareField(Field::Music, music);
 }
 
 void MenuPage::initializePage()
 {
-    QSettings settings("PitM", "VkConv");
-    MenuItem item = static_cast<MenuItem>( settings.value("menuItem", 0).toInt() );
-    switch(item) {
-        case MenuItem::Attachments: attachments->setChecked(true); break;
-        case MenuItem::SavedPhotos: savedPhotos->setChecked(true); break;
-        case MenuItem::Music: music->setChecked(true); break;
-    }
+    attachments->setChecked(Registry::Bool(Field::Attachments));
+    savedPhotos->setChecked(Registry::Bool(Field::SavedPhotos));
+    music->setChecked(Registry::Bool(Field::Music));
 
-    QString authResponse = field("authResponse").toString();
-    settings.setValue("tokenResponse", authResponse);
+    field2Registry(Field::TokenResponse);
 }
 
 /////////////////////////////////////////////////
@@ -168,7 +155,7 @@ void MenuPage::initializePage()
 /// \param parent
 ///
 DetailsPage::DetailsPage(CommonData &shared, QWidget *parent)
-    : QWizardPage(parent)
+    : VkConvPage(parent)
     , downloadDir(QDir("VkDownload").absolutePath())
     , shared(shared)
 {
@@ -224,12 +211,12 @@ DetailsPage::DetailsPage(CommonData &shared, QWidget *parent)
     layout->addWidget(docs);
     setLayout(layout);
 
-    registerField("downloadFolder", downloadDirPath);
-    registerField("me", me);
-    registerField("peerId", peers, "currentData");
-    registerField("photoAttachments", photo);
-    registerField("audioAttachments", audio);
-    registerField("docsAttachments", docs);
+    declareField(Field::DownloadFolder, downloadDirPath);
+    declareField(Field::Me, me);
+    declareField(Field::PeerId, peers, "currentData");
+    declareField(Field::PhotoAttachments, photo);
+    declareField(Field::AudioAttachments, audio);
+    declareField(Field::DocsAttachments, docs);
 }
 
 void DetailsPage::chooseDownloadDir()
@@ -238,8 +225,7 @@ void DetailsPage::chooseDownloadDir()
     if(!dir.isEmpty()) {
         downloadDir = dir;
         downloadDirPath->setText(dir);
-        QSettings settings("PitM", "VkConv");
-        settings.setValue("downloadFolder", downloadDir);
+        Registry::set(Field::DownloadFolder, downloadDir);
     }
 }
 
@@ -252,15 +238,14 @@ void DetailsPage::initializePage()
     me->show();
     notMe->show();
 
-    QSettings settings("PitM", "VkConv");
-    QString savedDownloadFolder = settings.value("downloadFolder").toString();
+    QString savedDownloadFolder = Registry::String(Field::DownloadFolder);
     if(!savedDownloadFolder.isEmpty()) {
         downloadDir = savedDownloadFolder;
     }
 
     downloadDirPath->setText(downloadDir);
 
-    QString authResponse = field("authResponse").toString();
+    QString authResponse = stringField(Field::TokenResponse);
     authResponse = authResponse.mid(authResponse.indexOf('#')+1);
     QUrlQuery authUrl(authResponse);
     shared.token = authUrl.queryItemValue("access_token");
@@ -274,7 +259,7 @@ void DetailsPage::initializePage()
         peers->addItem(u.second, u.first);
     }
 
-    qulonglong savedPeer = settings.value("peerId").toULongLong();
+    qulonglong savedPeer = Registry::ULL(Field::PeerId);
     for(int i = 0; i<peers->count(); ++i) {
         const qulonglong id = peers->itemData(i).toULongLong();
         if(id == savedPeer) {
@@ -283,9 +268,9 @@ void DetailsPage::initializePage()
         }
     }
 
-    bool downloadAttachments = field("downloadAttachments").toBool();
-    bool downloadSavedPhotos = field("downloadSavedPhotos").toBool();
-    bool downloadMusic = field("downloadMusic").toBool();
+    bool downloadAttachments = boolField(Field::Attachments);
+    bool downloadSavedPhotos = boolField(Field::SavedPhotos);
+    bool downloadMusic = boolField(Field::Music);
 
     if(downloadAttachments) {
         notMe->setChecked(true);
@@ -301,7 +286,7 @@ void DetailsPage::initializePage()
     }
 
     if(!downloadAttachments) {
-        bool meBool = settings.value("me", true).toBool();
+        bool meBool = Registry::Bool(Field::Me, true);
         me->setChecked(meBool);
         notMe->setChecked(!meBool);
     }
@@ -313,7 +298,7 @@ void DetailsPage::initializePage()
 /// \param parent
 ///
 DownloadPage::DownloadPage(CommonData &shared, QWidget *parent)
-    : QWizardPage(parent)
+    : VkConvPage(parent)
     , shared(shared)
 {
     setTitle(tr("Downloading"));
@@ -329,39 +314,33 @@ DownloadPage::DownloadPage(CommonData &shared, QWidget *parent)
 
 void DownloadPage::initializePage()
 {
-    QSettings settings("PitM", "VkConv");
+    bool downloadAttachments = boolField(Field::Attachments);
+    bool downloadSavedPhotos = boolField(Field::SavedPhotos);
+    bool downloadMusic = boolField(Field::Music);
 
-    if(field("downloadAttachments").toBool()) {
-        settings.setValue("menuItem", static_cast<int>(MenuItem::Attachments));
-    } else if(field("downloadSavedPhotos").toBool()) {
-        settings.setValue("menuItem", static_cast<int>(MenuItem::SavedPhotos));
-    } else if(field("downloadMusic").toBool()) {
-        settings.setValue("menuItem", static_cast<int>(MenuItem::Music));
-    }
+    Registry::set(Field::Attachments, downloadAttachments);
+    Registry::set(Field::SavedPhotos, downloadSavedPhotos);
+    Registry::set(Field::Music, downloadMusic);
 
-    qulonglong peer = field("peerId").toULongLong();
-    settings.setValue("peerId", peer);
+    field2Registry(Field::PeerId);
+    field2Registry(Field::Me);
 
-    bool me = field("me").toBool();
-    settings.setValue("me", me);
+    bool me = boolField(Field::Me);
+    qulonglong peer = ullField(Field::PeerId);
 
     QString peerId = QString::number(peer);
 
     const QString &token = shared.token;
     const QString &userId = me ? shared.ownerId : peerId;
 
-    bool downloadAttachments = field("downloadAttachments").toBool();
-    bool downloadSavedPhotos = field("downloadSavedPhotos").toBool();
-    bool downloadMusic = field("downloadMusic").toBool();
-
-    QString downloadFolder = field("downloadFolder").toString();
+    QString downloadFolder = stringField(Field::DownloadFolder);
 
     Downloader *d = new Downloader(token, shared.ownerId, downloadFolder, bar);
 
     if(downloadAttachments) {
-        bool photo = field("photoAttachments").toBool();
-        bool audio = field("audioAttachments").toBool();
-        bool docs = field("docsAttachments").toBool();
+        bool photo = boolField(Field::PhotoAttachments);
+        bool audio = boolField(Field::AudioAttachments);
+        bool docs = boolField(Field::DocsAttachments);
 
         if(photo) {
             d->downloadAttachments(peerId, ContentType::Photo);

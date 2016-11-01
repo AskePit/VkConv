@@ -2,6 +2,7 @@
 #define VKCONVWIZARD_H
 
 #include <QWizard>
+#include <QSettings>
 
 class QTextEdit;
 class QLineEdit;
@@ -12,9 +13,56 @@ class QRadioButton;
 class QButtonGroup;
 class QLabel;
 
-namespace Ui {
-class VkConvWizard;
+using CString = const QString &;
+
+enum class Field {
+    TokenResponse,
+    Attachments,
+    SavedPhotos,
+    Music,
+    DownloadFolder,
+    Me,
+    PeerId,
+    PhotoAttachments,
+    AudioAttachments,
+    DocsAttachments,
+};
+
+static QString fromField(Field field) {
+#define CASE(X) case Field::X: return #X
+    switch(field) {
+        CASE(TokenResponse);
+        CASE(Attachments);
+        CASE(SavedPhotos);
+        CASE(Music);
+        CASE(DownloadFolder);
+        CASE(Me);
+        CASE(PeerId);
+        CASE(PhotoAttachments);
+        CASE(AudioAttachments);
+        CASE(DocsAttachments);
+    }
+#undef CASE
+    return QString::null;
 }
+
+class Registry
+{
+public:
+    static QString String(Field key, CString def = QString::null) { return reg.value(fromField(key), def).toString(); }
+    static int Int(Field key, int def = 0)                        { return reg.value(fromField(key), def).toInt(); }
+    static qulonglong ULL(Field key, qulonglong def = 0)          { return reg.value(fromField(key), def).toULongLong(); }
+    static bool Bool(Field key, bool def = false)                 { return reg.value(fromField(key), def).toBool(); }
+
+    static void set(Field key, QVariant val) { reg.setValue(fromField(key), val); }
+
+private:
+    static QSettings reg;
+
+    Registry();
+    Registry(const Registry &) = delete;
+    operator=(const Registry &) = delete;
+};
 
 typedef QList<QPair<qulonglong, QString>> Uid2NameMap;
 
@@ -26,6 +74,10 @@ struct CommonData {
 
     CommonData() : newToken(true) {}
 };
+
+namespace Ui {
+class VkConvWizard;
+}
 
 /////////////////////////////////////////////////
 /// \brief The VkConvWizard class
@@ -45,10 +97,28 @@ protected:
     CommonData shared;
 };
 
+class VkConvPage : public QWizardPage
+{
+    Q_OBJECT
+public:
+    VkConvPage(QWidget *parent = 0) : QWizardPage(parent) {}
+
+    QString stringField(Field key) { return field(fromField(key)).toString(); }
+    int intField(Field key)        { return field(fromField(key)).toInt(); }
+    qulonglong ullField(Field key) { return field(fromField(key)).toULongLong(); }
+    bool boolField(Field key)      { return field(fromField(key)).toBool(); }
+
+    void declareField(Field key, QWidget *w, const char *prop = nullptr) { registerField(fromField(key), w, prop); }
+
+    void field2Registry(Field f) {
+        Registry::set(f, field(fromField(f)));
+    }
+};
+
 /////////////////////////////////////////////////
 /// \brief The AuthPage class
 ///
-class AuthPage : public QWizardPage
+class AuthPage : public VkConvPage
 {
     Q_OBJECT
 
@@ -66,7 +136,7 @@ private:
 /////////////////////////////////////////////////
 /// \brief The MenuPage class
 ///
-class MenuPage : public QWizardPage
+class MenuPage : public VkConvPage
 {
     Q_OBJECT
 
@@ -86,7 +156,7 @@ private:
 /////////////////////////////////////////////////
 /// \brief The AttachmentsPage class
 ///
-class DetailsPage : public QWizardPage
+class DetailsPage : public VkConvPage
 {
     Q_OBJECT
 
@@ -117,7 +187,7 @@ private:
 /////////////////////////////////////////////////
 /// \brief The DownloadPage class
 ///
-class DownloadPage : public QWizardPage
+class DownloadPage : public VkConvPage
 {
     Q_OBJECT
 

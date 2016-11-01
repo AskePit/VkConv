@@ -499,7 +499,7 @@ void Downloader::_downloadMusic(QNetworkReply* reply)
     }
 
     if(response.count()) {
-        downloadMusic(mOwnerId, mMusicMap[reply]+1000);
+        downloadMusic(mUserId, mMusicMap[reply]+1000);
     }
 
     mMusicMap.remove(reply);

@@ -26,8 +26,6 @@ VkConvWizard::VkConvWizard(QWidget *parent)
     : QWizard(parent)
 {
     setButtonText(QWizard::FinishButton, tr("New"));
-    setButtonText(QWizard::NextButton, tr("Next"));
-    setButtonText(QWizard::BackButton, tr("Back"));
     setButtonText(QWizard::CancelButton, tr("Exit"));
 
     setPage(Page_Auth, new AuthPage);
@@ -307,7 +305,6 @@ void DetailsPage::initializePage()
         me->setChecked(meBool);
         notMe->setChecked(!meBool);
     }
-
 }
 
 /////////////////////////////////////////////////

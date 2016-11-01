@@ -23,7 +23,7 @@ class Downloader : public QObject
     Q_OBJECT
 
 public:
-    explicit Downloader(const QString &token, const QString &ownerId, QProgressBar *mBar, QObject *parent = 0);
+    explicit Downloader(const QString &token, const QString &ownerId, const QString &downloadFolder = ".", QProgressBar *bar = 0, QObject *parent = 0);
     virtual ~Downloader();
 
     Uid2NameMap getPeers();
@@ -38,6 +38,8 @@ private slots:
 
 private:
     QNetworkAccessManager *mNetwork;
+
+    QString mDownloadFolder;
 
     QString mToken;
 

@@ -5,6 +5,7 @@
 #include <QTextEdit>
 #include <QLineEdit>
 #include <QCheckBox>
+#include <QPushButton>
 #include <QRadioButton>
 #include <QButtonGroup>
 #include <QComboBox>
@@ -12,6 +13,8 @@
 #include <QVBoxLayout>
 #include <QUrlQuery>
 #include <QSettings>
+#include <QDir>
+#include <QFileDialog>
 
 #include <time.h>
 
@@ -168,6 +171,7 @@ void MenuPage::initializePage()
 ///
 DetailsPage::DetailsPage(CommonData &shared, QWidget *parent)
     : QWizardPage(parent)
+    , downloadDir(QDir("VkDownload").absolutePath())
     , shared(shared)
 {
     setTitle(tr("Details"));
@@ -187,7 +191,21 @@ DetailsPage::DetailsPage(CommonData &shared, QWidget *parent)
 
     photo->setChecked(true);
 
+    QLabel *dirLabel = new QLabel(tr("Download folder:"));
+    downloadDirPath = new QLineEdit();
+    downloadDirPath->setDisabled(true);
+    QPushButton *browseButton = new QPushButton(tr("Browse..."));
+    connect(browseButton, SIGNAL(clicked(bool)), this, SLOT(chooseDownloadDir()));
+
     QVBoxLayout *layout = new QVBoxLayout;
+    layout->addWidget(dirLabel);
+    QHBoxLayout *h2Layout = new QHBoxLayout;
+    QWidget *h2LayoutWidget = new QWidget;
+    h2Layout->setContentsMargins(0, 0, 0, 0);
+    h2Layout->addWidget(downloadDirPath);
+    h2Layout->addWidget(browseButton);
+    h2LayoutWidget->setLayout(h2Layout);
+    layout->addWidget(h2LayoutWidget);
     layout->addStretch(1);
     QLabel *peerLabel = new QLabel(tr("Peer to download:"));
     layout->addWidget(peerLabel);
@@ -206,9 +224,9 @@ DetailsPage::DetailsPage(CommonData &shared, QWidget *parent)
     layout->addWidget(photo);
     layout->addWidget(audio);
     layout->addWidget(docs);
-    layout->addStretch(1);
     setLayout(layout);
 
+    registerField("downloadFolder", downloadDirPath);
     registerField("me", me);
     registerField("peerId", peers, "currentData");
     registerField("photoAttachments", photo);
@@ -216,15 +234,41 @@ DetailsPage::DetailsPage(CommonData &shared, QWidget *parent)
     registerField("docsAttachments", docs);
 }
 
+void DetailsPage::chooseDownloadDir()
+{
+    QString dir = QFileDialog::getExistingDirectory(this, tr("Select download folder"), downloadDir);
+    if(!dir.isEmpty()) {
+        downloadDir = dir;
+        downloadDirPath->setText(dir);
+        QSettings settings("PitM", "VkConv");
+        settings.setValue("downloadFolder", downloadDir);
+    }
+}
+
 void DetailsPage::initializePage()
 {
+    contentLabel->show();
+    photo->show();
+    audio->show();
+    docs->show();
+    me->show();
+    notMe->show();
+
+    QSettings settings("PitM", "VkConv");
+    QString savedDownloadFolder = settings.value("downloadFolder").toString();
+    if(!savedDownloadFolder.isEmpty()) {
+        downloadDir = savedDownloadFolder;
+    }
+
+    downloadDirPath->setText(downloadDir);
+
     QString authResponse = field("authResponse").toString();
     authResponse = authResponse.mid(authResponse.indexOf('#')+1);
     QUrlQuery authUrl(authResponse);
     shared.token = authUrl.queryItemValue("access_token");
     shared.ownerId = authUrl.queryItemValue("user_id");
 
-    Downloader d(shared.token, shared.ownerId, nullptr);
+    Downloader d(shared.token, shared.ownerId);
     shared.uid2name = d.getPeers();
 
     peers->clear();
@@ -232,7 +276,6 @@ void DetailsPage::initializePage()
         peers->addItem(u.second, u.first);
     }
 
-    QSettings settings("PitM", "VkConv");
     qulonglong savedPeer = settings.value("peerId").toULongLong();
     for(int i = 0; i<peers->count(); ++i) {
         const qulonglong id = peers->itemData(i).toULongLong();
@@ -262,6 +305,7 @@ void DetailsPage::initializePage()
     if(!downloadAttachments) {
         bool meBool = settings.value("me", true).toBool();
         me->setChecked(meBool);
+        notMe->setChecked(!meBool);
     }
 
 }
@@ -313,7 +357,9 @@ void DownloadPage::initializePage()
     bool downloadSavedPhotos = field("downloadSavedPhotos").toBool();
     bool downloadMusic = field("downloadMusic").toBool();
 
-    Downloader *d = new Downloader(token, shared.ownerId, bar);
+    QString downloadFolder = field("downloadFolder").toString();
+
+    Downloader *d = new Downloader(token, shared.ownerId, downloadFolder, bar);
 
     if(downloadAttachments) {
         bool photo = field("photoAttachments").toBool();

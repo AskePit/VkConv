@@ -96,7 +96,13 @@ public:
 protected:
     void initializePage();
 
+private slots:
+    void chooseDownloadDir();
+
 private:
+    QString downloadDir;
+
+    QLineEdit *downloadDirPath;
     QRadioButton *me;
     QRadioButton *notMe;
     QComboBox *peers;

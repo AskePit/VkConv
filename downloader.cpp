@@ -12,8 +12,9 @@
 
 #include <QDebug>
 
-Downloader::Downloader(const QString &token, const QString &ownerId, QProgressBar *bar, QObject *parent)
+Downloader::Downloader(const QString &token, const QString &ownerId, const QString &downloadFolder, QProgressBar *bar, QObject *parent)
     : QObject(parent)
+    , mDownloadFolder(downloadFolder)
     , mToken(token)
     , mOwnerId(ownerId)
     , mPeersMapCached(false)
@@ -267,7 +268,7 @@ void Downloader::_downloadAttachments(QNetworkReply* reply)
 
     ContentType contentType = mAttachmentsMap[reply];
     QString userDirName = (mOwnerId == mUserId) ? "_Me" : QString("%1 %2").arg(mUserName, mUserId);
-    QString dirName(QString("%1 %2/%3/%4/%5/").arg(mOwnerName, mOwnerId, userDirName, "attachments", ContentTypeString(contentType)));
+    QString dirName(QString("%1/%2 %3/%4/%5/%6/").arg(mDownloadFolder, mOwnerName, mOwnerId, userDirName, "attachments", ContentTypeString(contentType)));
     QDir d;
     d.mkpath(dirName);
 
@@ -353,8 +354,6 @@ void Downloader::downloadFile(QNetworkReply* reply)
 
     mProgressMap[reply] = QPair<quint64, quint64>(bytes, bytes);
 
-    //qDebug() << "download" << bytes;
-
     QFile file(fileName);
     if (!file.open(QIODevice::WriteOnly)) {
         qWarning() << "Couldn't open file " << fileName;
@@ -420,7 +419,7 @@ void Downloader::_downloadSavedPhotos(QNetworkReply* reply)
     }
 
     QString userDirName = (mOwnerId == mUserId) ? "_Me" : QString("%1 %2").arg(mUserName, mUserId);
-    QString dirName(QString("%1 %2/%3/%4").arg(mOwnerName, mOwnerId, userDirName, "saved photos"));
+    QString dirName(QString("%1/%2 %3/%4/%5").arg(mDownloadFolder, mOwnerName, mOwnerId, userDirName, "saved photos"));
     QDir d;
     d.mkpath(dirName);
 
@@ -482,7 +481,7 @@ void Downloader::_downloadMusic(QNetworkReply* reply)
     }
 
     QString userDirName = (mOwnerId == mUserId) ? "_Me" : QString("%1 %2").arg(mUserName, mUserId);
-    QString dirName(QString("%1 %2/%3/%4").arg(mOwnerName, mOwnerId, userDirName, "music"));
+    QString dirName(QString("%1/%2 %3/%4/%5").arg(mDownloadFolder, mOwnerName, mOwnerId, userDirName, "music"));
     QDir d;
     d.mkpath(dirName);
 
